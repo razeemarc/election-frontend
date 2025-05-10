@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Tabs,
   TabsContent,
@@ -17,8 +18,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { useUserStore } from '@/store/userStore';
+import { toast } from '@/components/ui/use-toast';
 
 const AuthUI = () => {
+  const router = useRouter();
+  const login = useUserStore((state) => state.login);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [formData, setFormData] = useState<{
@@ -44,11 +49,12 @@ const AuthUI = () => {
     setIsLoading(true);
 
     const { email, password, name } = formData;
-    let url = 'http://localhost:5000/api/auth/login';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    let endpoint = '/api/auth/login';
     let payload: { email: string; password: string; name?: string } = { email, password };
 
     if (activeTab === "signup") {
-      url = 'http://localhost:5000/api/auth/signup';
+      endpoint = '/api/auth/signup';
       payload = {
         email,
         password,
@@ -57,7 +63,7 @@ const AuthUI = () => {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch(`${apiUrl}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,14 +77,33 @@ const AuthUI = () => {
       setIsLoading(false);
 
       if (response.ok) {
-        window.location.href = '/dashboard';
+        // Store user data in Zustand store and token in cookie
+        login(data.user, data.token);
+        
+        // Show success message
+        toast({
+          title: "Success",
+          description: data.message || "Authentication successful",
+          variant: "default",
+        });
+        
+        // Redirect to dashboard
+        router.push('/dashboard');
       } else {
-        alert(data.message || 'Something went wrong!');
+        toast({
+          title: "Error",
+          description: data.message || 'Something went wrong!',
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Auth error:', error);
       setIsLoading(false);
-      alert('An error occurred. Please try again later.');
+      toast({
+        title: "Error",
+        description: 'An error occurred. Please try again later.',
+        variant: "destructive",
+      });
     }
   };
 
@@ -129,15 +154,7 @@ const AuthUI = () => {
                     required
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="remember" />
-                  <label
-                    htmlFor="remember"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Remember me
-                  </label>
-                </div>
+               
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>

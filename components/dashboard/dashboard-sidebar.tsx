@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Users, Vote, UserCircle, Settings, LogOut } from "lucide-react"
+import { useUserStore } from "@/store/userStore"
 
 import {
   Sidebar,
@@ -17,6 +18,13 @@ import {
 
 export function DashboardSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const logout = useUserStore((state) => state.logout)
+
+  const handleLogout = () => {
+    logout() // Clear user data from store and remove token from cookies
+    router.push("/auth") // Redirect to auth page
+  }
 
   const routes = [
     {
@@ -44,11 +52,11 @@ export function DashboardSidebar() {
       href: "/dashboard/users",
       icon: Users,
     },
-    {
-      title: "Settings",
-      href: "/dashboard/settings",
-      icon: Settings,
-    },
+    // {
+    //   title: "Settings",
+    //   href: "/dashboard/settings",
+    //   icon: Settings,
+    // },
   ]
 
   return (
@@ -77,11 +85,9 @@ export function DashboardSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/logout">
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </Link>
+            <SidebarMenuButton onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

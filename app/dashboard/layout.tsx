@@ -1,27 +1,44 @@
-import type React from "react"
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
-import { UserNav } from "@/components/dashboard/user-nav"
-import { SidebarProvider } from "@/components/ui/sidebar"
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUserStore } from "@/store/userStore";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { user, isAuthenticated } = useUserStore();
+
+  useEffect(() => {
+    // If not authenticated, redirect to login
+    if (!isAuthenticated) {
+      router.push("/auth");
+      return;
+    }
+
+    // If user is not an admin, redirect to home
+    if (user?.role !== "ADMIN") {
+      console.log("User role is not ADMIN, redirecting to home");
+      router.push("/");
+    }
+  }, [user, isAuthenticated, router]);
+
+  // Don't render anything until we've checked authentication
+  if (!isAuthenticated || user?.role !== "ADMIN") {
+    return null;
+  }
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen w-full flex flex-col">
-        <header className="sticky top-0 z-10 border-b bg-background">
-          <div className="flex items-center justify-end h-16 px-4">
-            <UserNav />
-          </div>
-        </header>
-        
-        <div className="flex flex-1 h-full">
-          <DashboardSidebar />
-          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">{children}</main>
-        </div>
+      <div className="flex  w-full min-h-screen">
+        <DashboardSidebar />
+        <div className="flex-1   p-8">{children}</div>
       </div>
     </SidebarProvider>
-  )
+  );
 }
