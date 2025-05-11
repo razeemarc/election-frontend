@@ -35,6 +35,7 @@ const AuthUI = () => {
     password: '',
     name: ''
   });
+  const [error, setError] = useState<string | null>(null); // New state for error messages
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -42,11 +43,14 @@ const AuthUI = () => {
       ...formData,
       [name]: value,
     });
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null); // Reset error state on new submission
 
     const { email, password, name } = formData;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -90,6 +94,8 @@ const AuthUI = () => {
         // Redirect to dashboard
         router.push('/dashboard');
       } else {
+        // Set error message to display in the form
+        setError(data.message || 'Something went wrong!');
         toast({
           title: "Error",
           description: data.message || 'Something went wrong!',
@@ -99,6 +105,7 @@ const AuthUI = () => {
     } catch (error) {
       console.error('Auth error:', error);
       setIsLoading(false);
+      setError('An error occurred. Please try again later.');
       toast({
         title: "Error",
         description: 'An error occurred. Please try again later.',
@@ -123,6 +130,13 @@ const AuthUI = () => {
 
         <Tabs value={activeTab} className="w-full">
           <CardContent className="pt-6 pb-4">
+            {/* Display error message if it exists */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
             <TabsContent value="signin">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -160,10 +174,13 @@ const AuthUI = () => {
                 </Button>
               </form>
               <div className="text-sm text-center mt-4">
-                Don’t have an account?{" "}
+                Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setActiveTab("signup")}
+                  onClick={() => {
+                    setActiveTab("signup");
+                    setError(null); // Clear error when switching tabs
+                  }}
                   className="text-blue-600 hover:underline"
                 >
                   Create one
@@ -218,7 +235,10 @@ const AuthUI = () => {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setActiveTab("signin")}
+                  onClick={() => {
+                    setActiveTab("signin");
+                    setError(null); // Clear error when switching tabs
+                  }}
                   className="text-blue-600 hover:underline"
                 >
                   Sign in

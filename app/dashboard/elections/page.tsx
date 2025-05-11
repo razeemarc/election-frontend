@@ -182,7 +182,7 @@ export default function ElectionsPage() {
                 />
               </div>
               
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Input
                   id="description"
@@ -191,7 +191,7 @@ export default function ElectionsPage() {
                   onChange={handleInputChange}
                   placeholder="Enter election description"
                 />
-              </div>
+              </div> */}
               
               <div className="space-y-2">
                 <Label htmlFor="participants">Select Participants</Label>
