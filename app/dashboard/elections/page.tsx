@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Calendar, Clock, Check, Search, X } from "lucide-react";
 import {
@@ -25,62 +25,66 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ElectionsDataTable } from "@/components/dashboard/elections-data-table";
+import { useUserStore } from "@/store/userStore";
 
-// Mock users data
-const users = [
-  { id: "1", name: "John Smith", email: "john.smith@example.com", department: "Engineering" },
-  { id: "2", name: "Sarah Johnson", email: "sarah.johnson@example.com", department: "Marketing" },
-  { id: "3", name: "Michael Brown", email: "michael.brown@example.com", department: "HR" },
-  { id: "4", name: "Emma Davis", email: "emma.davis@example.com", department: "Finance" },
-  { id: "5", name: "James Wilson", email: "james.wilson@example.com", department: "Engineering" },
-  { id: "6", name: "Olivia Taylor", email: "olivia.taylor@example.com", department: "Product" },
-  { id: "7", name: "William Anderson", email: "william.anderson@example.com", department: "Sales" },
-  { id: "8", name: "Sophia Martinez", email: "sophia.martinez@example.com", department: "Marketing" },
-  { id: "9", name: "Benjamin Thomas", email: "benjamin.thomas@example.com", department: "Engineering" },
-  { id: "10", name: "Isabella Garcia", email: "isabella.garcia@example.com", department: "Legal" },
-];
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isBlocked: boolean;
+  candidacies: {
+    electionId: string;
+  }[];
+}
 
 export default function ElectionsPage() {
   const [open, setOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<typeof users>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Member[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useUserStore(); // Get current user from store
   
   const [formData, setFormData] = useState({
-    name: "",
-    status: "Draft",
+    title: "",
+    description: "",
     startDate: "",
     startTime: "09:00",
     endDate: "",
     endTime: "17:00",
   });
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
+  // Fetch members when component mounts
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/members');
+        const data = await response.json();
+        setMembers(data.members);
+      } catch (error) {
+        console.error("Failed to fetch members:", error);
+      }
+    };
+    
+    fetchMembers();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleStatusChange = (value: any) => {
-    setFormData((prev) => ({ ...prev, status: value }));
-  };
-
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = members.filter(user => 
     !selectedUsers.some(selected => selected.id === user.id) &&
     (user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     user.department.toLowerCase().includes(searchQuery.toLowerCase()))
+     user.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const selectUser = (user: { id: string; name: string; email: string; department: string; }) => {
+  const selectUser = (user: Member) => {
     setSelectedUsers([...selectedUsers, user]);
   };
 
@@ -88,38 +92,60 @@ export default function ElectionsPage() {
     setSelectedUsers(selectedUsers.filter(user => user.id !== userId));
   };
 
-  const handleSubmit = () => {    
-    const newElection = {
-      id: Math.floor(Math.random() * 1000).toString(),
-      name: formData.name,
-      participants: selectedUsers.length,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      status: formData.status,
-      votes: 0,
-      // Include the selected users
-      selectedUsers: selectedUsers.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email
-      }))
-    };
+  const handleSubmit = async () => {    
+    if (!user?.id) {
+      console.error("No user logged in");
+      return;
+    }
+
+    setLoading(true);
     
-    console.log("New election created:", newElection);
-    // Here you would typically add this to your data array
-    // and/or send it to your backend
-    
-    setOpen(false);
-    // Reset form
-    setFormData({
-      name: "",
-      status: "Draft",
-      startDate: "",
-      startTime: "09:00",
-      endDate: "",
-      endTime: "17:00",
-    });
-    setSelectedUsers([]);
+    try {
+      const payload = {
+        memberId: user.id,
+        title: formData.title,
+        description: formData.description,
+        startDate: formData.startDate,
+        startTime: formData.startTime,
+        endDate: formData.endDate,
+        endTime: formData.endTime,
+        memberIds: selectedUsers.map(user => user.id)
+      };
+
+      const response = await fetch('http://localhost:5000/api/admin/election', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create election');
+      }
+
+      const newElection = await response.json();
+      console.log("Election created:", newElection);
+      
+      // Here you would typically update your elections list
+      // For example, by refetching the elections data
+
+      setOpen(false);
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        startDate: "",
+        startTime: "09:00",
+        endDate: "",
+        endTime: "17:00",
+      });
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error("Error creating election:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -146,13 +172,24 @@ export default function ElectionsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Election Name</Label>
+                <Label htmlFor="title">Election Title</Label>
                 <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
+                  id="title"
+                  name="title"
+                  value={formData.title}
                   onChange={handleInputChange}
-                  placeholder="Enter election name"
+                  placeholder="Enter election title"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Enter election description"
                 />
               </div>
               
@@ -193,9 +230,6 @@ export default function ElectionsPage() {
                               <span>{user.name}</span>
                               <span className="text-sm text-gray-500">{user.email}</span>
                             </div>
-                            <Check
-                              className="ml-auto h-4 w-4 opacity-0"
-                            />
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -219,8 +253,6 @@ export default function ElectionsPage() {
                   </div>
                 )}
               </div>
-
-            
 
               <div className="flex flex-col gap-4">
                 <div className="space-y-2">
@@ -256,24 +288,24 @@ export default function ElectionsPage() {
                     <div className="relative w-full">
                       <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                       <Input
-  id="endDate"
-  name="endDate"
-  type="date"
-  value={formData.endDate}
-  onChange={handleInputChange}
-  className="pl-10"
-/>
-</div>
-<div className="relative w-24">
-  <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-  <Input
-    type="time"
-    name="endTime"
-    value={formData.endTime}
-    onChange={handleInputChange}
-    className="pl-10"
-/>
-</div>
+                        id="endDate"
+                        name="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                      />
+                    </div>
+                    <div className="relative w-24">
+                      <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="time"
+                        name="endTime"
+                        value={formData.endTime}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -283,7 +315,13 @@ export default function ElectionsPage() {
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSubmit}>Create Election</Button>
+              <Button 
+                type="button" 
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Election"}
+              </Button>
             </DialogFooter>
           </div>
         </DialogContent>

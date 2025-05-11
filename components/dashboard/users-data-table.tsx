@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -21,104 +21,85 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-export type User = {
+export type Member = {
   id: string
   name: string
   email: string
-  role: "Admin" | "Moderator" | "User"
-  status: "Active" | "Blocked"
-  lastLogin: string
+  role: "ADMIN" | "MODERATOR" | "USER"
+  isBlocked: boolean
+  candidacies: {
+    electionId: string
+  }[]
+  lastLogin?: string
 }
 
-const data: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Admin",
-    status: "Active",
-    lastLogin: "2025-05-10 14:30",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "Moderator",
-    status: "Active",
-    lastLogin: "2025-05-09 10:15",
-  },
-  {
-    id: "3",
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    role: "User",
-    status: "Blocked",
-    lastLogin: "2025-05-01 08:45",
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    role: "User",
-    status: "Active",
-    lastLogin: "2025-05-08 16:20",
-  },
-  {
-    id: "5",
-    name: "Michael Wilson",
-    email: "michael.wilson@example.com",
-    role: "Moderator",
-    status: "Active",
-    lastLogin: "2025-05-07 11:30",
-  },
-  {
-    id: "6",
-    name: "Sarah Brown",
-    email: "sarah.brown@example.com",
-    role: "User",
-    status: "Blocked",
-    lastLogin: "2025-04-30 09:10",
-  },
-  {
-    id: "7",
-    name: "David Miller",
-    email: "david.miller@example.com",
-    role: "User",
-    status: "Active",
-    lastLogin: "2025-05-06 13:45",
-  },
-  {
-    id: "8",
-    name: "Jennifer Taylor",
-    email: "jennifer.taylor@example.com",
-    role: "Admin",
-    status: "Active",
-    lastLogin: "2025-05-05 15:20",
-  },
-  {
-    id: "9",
-    name: "James Anderson",
-    email: "james.anderson@example.com",
-    role: "User",
-    status: "Active",
-    lastLogin: "2025-05-04 10:05",
-  },
-  {
-    id: "10",
-    name: "Patricia Thomas",
-    email: "patricia.thomas@example.com",
-    role: "User",
-    status: "Blocked",
-    lastLogin: "2025-04-28 14:15",
-  },
-]
-
 export function UsersDataTable() {
+  const [data, setData] = useState<Member[]>([])
+  const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
 
-  const columns: ColumnDef<User>[] = [
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/members')
+        const result = await response.json()
+        
+        // Transform API data to match our table format
+        const members = result.members.map((member: Member) => ({
+          ...member,
+          status: member.isBlocked ? "Blocked" : "Active",
+          role: member.role === "ADMIN" ? "Admin" : 
+                member.role === "MODERATOR" ? "Moderator" : "User",
+          lastLogin: member.lastLogin || "Never logged in"
+        }))
+        
+        setData(members)
+      } catch (error) {
+        console.error("Failed to fetch members:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMembers()
+  }, [])
+
+  const handleBlockToggle = async (memberId: string, isCurrentlyBlocked: boolean) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/candidate/block/${memberId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          block: !isCurrentlyBlocked
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update member status')
+      }
+
+      // Update local state to reflect the change
+      setData(prevData => 
+        prevData.map(member => 
+          member.id === memberId 
+            ? { 
+                ...member, 
+                isBlocked: !isCurrentlyBlocked, 
+                status: !isCurrentlyBlocked ? "Active" : "Blocked" 
+              } 
+            : member
+        )
+      )
+    } catch (error) {
+      console.error("Error updating member status:", error)
+    }
+  }
+
+  const columns: ColumnDef<Member>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -182,19 +163,18 @@ export function UsersDataTable() {
       },
     },
     {
-      accessorKey: "lastLogin",
-      header: "Last Login",
-      cell: ({ row }) => <div>{row.getValue("lastLogin")}</div>,
-    },
-    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        const user = row.original
-        const isBlocked = user.status === "Blocked"
-
+        const member = row.original
+        const isBlocked = member.isBlocked
+        
         return (
-          <Button variant="outline" size="sm" onClick={() => console.log(isBlocked ? "Unblock" : "Block", user.id)}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleBlockToggle(member.id, isBlocked)}
+          >
             {isBlocked ? (
               <>
                 <Unlock className="mr-2 h-4 w-4" />
@@ -228,6 +208,10 @@ export function UsersDataTable() {
       rowSelection,
     },
   })
+
+  if (loading) {
+    return <div className="flex justify-center py-8">Loading members...</div>
+  }
 
   return (
     <div className="space-y-4">
@@ -266,7 +250,7 @@ export function UsersDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No users found.
+                  No members found.
                 </TableCell>
               </TableRow>
             )}

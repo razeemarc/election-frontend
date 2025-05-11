@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -30,92 +30,72 @@ import { Badge } from "@/components/ui/badge"
 
 export type Election = {
   id: string
-  name: string
+  title: string
   description: string
-  startDate: string
-  endDate: string
+  startTime: string
+  endTime: string
   status: "Draft" | "Scheduled" | "Active" | "Completed" | "Cancelled"
   participants: number
   votes: number
+  admin: {
+    name: string
+  }
+  candidates: {
+    id: string
+  }[]
 }
 
-const data: Election[] = [
-  {
-    id: "1",
-    name: "Student Council Election",
-    description: "Election for student council representatives",
-    startDate: "2025-05-20",
-    endDate: "2025-05-25",
-    status: "Active",
-    participants: 12,
-    votes: 345,
-  },
-  {
-    id: "2",
-    name: "Board of Directors",
-    description: "Annual board member election",
-    startDate: "2025-06-05",
-    endDate: "2025-06-10",
-    status: "Scheduled",
-    participants: 8,
-    votes: 0,
-  },
-  {
-    id: "3",
-    name: "Department Head Selection",
-    description: "Selection of department heads",
-    startDate: "2025-04-15",
-    endDate: "2025-04-20",
-    status: "Completed",
-    participants: 5,
-    votes: 120,
-  },
-  {
-    id: "4",
-    name: "Community Representative",
-    description: "Election for community representatives",
-    startDate: "2025-05-30",
-    endDate: "2025-06-05",
-    status: "Scheduled",
-    participants: 10,
-    votes: 0,
-  },
-  {
-    id: "5",
-    name: "Club President Election",
-    description: "Election for club presidents",
-    startDate: "2025-04-10",
-    endDate: "2025-04-15",
-    status: "Active",
-    participants: 6,
-    votes: 78,
-  },
-  {
-    id: "6",
-    name: "Faculty Senate",
-    description: "Election for faculty senate members",
-    startDate: "2025-07-01",
-    endDate: "2025-07-10",
-    status: "Draft",
-    participants: 0,
-    votes: 0,
-  },
-  {
-    id: "7",
-    name: "Student Union Representatives",
-    description: "Election for student union representatives",
-    startDate: "2025-03-15",
-    endDate: "2025-03-20",
-    status: "Completed",
-    participants: 15,
-    votes: 432,
-  },
-]
-
 export function ElectionsDataTable() {
+  const [data, setData] = useState<Election[]>([])
+  const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
+
+  useEffect(() => {
+    const fetchElections = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`)
+        const elections = await response.json()
+        
+        const processedElections = elections.map((election: any) => {
+          const now = new Date()
+          const startTime = new Date(election.startTime)
+          const endTime = new Date(election.endTime)
+          
+          let status: "Draft" | "Scheduled" | "Active" | "Completed" | "Cancelled" = "Scheduled"
+          
+          if (now < startTime) {
+            status = "Scheduled"
+          } else if (now >= startTime && now <= endTime) {
+            status = "Active"
+          } else if (now > endTime) {
+            status = "Completed"
+          }
+          
+          return {
+            id: election.id,
+            title: election.title,
+            description: election.description,
+            startTime: startTime.toISOString().split('T')[0],
+            endTime: endTime.toISOString().split('T')[0],
+            status,
+            participants: election.candidates.length,
+            votes: election.votes.length,
+            admin: election.admin
+          }
+        })
+        
+        setData(processedElections)
+      } catch (error) {
+        console.error("Failed to fetch elections:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchElections()
+  }, [])
 
   const columns: ColumnDef<Election>[] = [
     {
@@ -138,26 +118,23 @@ export function ElectionsDataTable() {
       enableHiding: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: "title",
       header: ({ column }) => {
         return (
           <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            Name
+            Title
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
-      cell: ({ row }) => <div>{row.getValue("name")}</div>,
     },
     {
-      accessorKey: "startDate",
+      accessorKey: "startTime",
       header: "Start Date",
-      cell: ({ row }) => <div>{row.getValue("startDate")}</div>,
     },
     {
-      accessorKey: "endDate",
+      accessorKey: "endTime",
       header: "End Date",
-      cell: ({ row }) => <div>{row.getValue("endDate")}</div>,
     },
     {
       accessorKey: "status",
@@ -173,9 +150,7 @@ export function ElectionsDataTable() {
                   ? "outline"
                   : status === "Completed"
                     ? "secondary"
-                    : status === "Draft"
-                      ? "destructive"
-                      : "secondary"
+                    : "destructive"
             }
           >
             {status}
@@ -185,26 +160,12 @@ export function ElectionsDataTable() {
     },
     {
       accessorKey: "participants",
-      header: ({ column }) => {
-        return (
-          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            Participants
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: "Participants",
       cell: ({ row }) => <div className="text-center">{row.getValue("participants")}</div>,
     },
     {
       accessorKey: "votes",
-      header: ({ column }) => {
-        return (
-          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            Votes
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: "Votes",
       cell: ({ row }) => <div className="text-center">{row.getValue("votes")}</div>,
     },
     {
@@ -258,13 +219,17 @@ export function ElectionsDataTable() {
     },
   })
 
+  if (loading) {
+    return <div className="flex justify-center py-8">Loading elections...</div>
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter elections..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+          onChange={(event) => table.getColumn("title")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
       </div>
@@ -273,13 +238,11 @@ export function ElectionsDataTable() {
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -288,7 +251,9 @@ export function ElectionsDataTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
@@ -304,8 +269,7 @@ export function ElectionsDataTable() {
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
+          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <div className="space-x-2">
           <Button
@@ -316,7 +280,12 @@ export function ElectionsDataTable() {
           >
             Previous
           </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
             Next
           </Button>
         </div>
