@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -26,90 +26,89 @@ export type Participant = {
   name: string
   email: string
   election: string
-  position: string
   requestDate: string
   status: "Pending" | "Approved" | "Denied"
+  memberId: string
+  electionId: string
 }
 
-const data: Participant[] = [
-  {
-    id: "1",
-    name: "Alice Johnson",
-    email: "alice.johnson@example.com",
-    election: "Student Council Election",
-    position: "President",
-    requestDate: "2025-05-10",
-    status: "Pending",
-  },
-  {
-    id: "2",
-    name: "Bob Smith",
-    email: "bob.smith@example.com",
-    election: "Student Council Election",
-    position: "Vice President",
-    requestDate: "2025-05-11",
-    status: "Pending",
-  },
-  {
-    id: "3",
-    name: "Charlie Brown",
-    email: "charlie.brown@example.com",
-    election: "Board of Directors",
-    position: "Member",
-    requestDate: "2025-05-20",
-    status: "Approved",
-  },
-  {
-    id: "4",
-    name: "Diana Prince",
-    email: "diana.prince@example.com",
-    election: "Department Head Selection",
-    position: "Department Head",
-    requestDate: "2025-04-05",
-    status: "Denied",
-  },
-  {
-    id: "5",
-    name: "Edward Norton",
-    email: "edward.norton@example.com",
-    election: "Community Representative",
-    position: "Representative",
-    requestDate: "2025-05-15",
-    status: "Pending",
-  },
-  {
-    id: "6",
-    name: "Fiona Apple",
-    email: "fiona.apple@example.com",
-    election: "Club President Election",
-    position: "President",
-    requestDate: "2025-04-01",
-    status: "Approved",
-  },
-  {
-    id: "7",
-    name: "George Lucas",
-    email: "george.lucas@example.com",
-    election: "Faculty Senate",
-    position: "Senator",
-    requestDate: "2025-06-20",
-    status: "Pending",
-  },
-  {
-    id: "8",
-    name: "Hannah Montana",
-    email: "hannah.montana@example.com",
-    election: "Student Union Representatives",
-    position: "Representative",
-    requestDate: "2025-03-10",
-    status: "Approved",
-  },
-]
-
 export function ParticipantsDataTable() {
+  const [data, setData] = useState<Participant[]>([])
+  const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
+
+  useEffect(() => {
+    const fetchPendingCandidates = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/pending`)
+        const result = await response.json()
+        
+        if (result.success) {
+          // Transform API data to match our table format
+          const participants = result.data.map((candidate: any) => ({
+            id: candidate.id,
+            name: candidate.member.name,
+            email: candidate.member.email,
+            election: candidate.election.title,
+            requestDate: new Date(candidate.appliedAt).toISOString().split('T')[0],
+            status: "Pending", // Since we're only fetching pending candidates
+            memberId: candidate.memberId,
+            electionId: candidate.electionId
+          }))
+          
+          setData(participants)
+        }
+      } catch (error) {
+        console.error("Failed to fetch pending candidates:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPendingCandidates()
+  }, [])
+
+  const handleApprove = async (candidateId: string, memberId: string, electionId: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/approve/${memberId}/${electionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: "APPROVED"
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to approve candidate')
+      }
+
+      // Remove the approved candidate from the list
+      setData(prevData => prevData.filter(participant => participant.id !== candidateId))
+    } catch (error) {
+      console.error("Error approving candidate:", error)
+    }
+  }
+
+  const handleDeny = async (candidateId: string, memberId: string, electionId: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/reject/${memberId}/${electionId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reject candidate')
+      }
+
+      // Remove the rejected candidate from the list
+      setData(prevData => prevData.filter(participant => participant.id !== candidateId))
+    } catch (error) {
+      console.error("Error rejecting candidate:", error)
+    }
+  }
 
   const columns: ColumnDef<Participant>[] = [
     {
@@ -162,11 +161,6 @@ export function ParticipantsDataTable() {
       cell: ({ row }) => <div>{row.getValue("election")}</div>,
     },
     {
-      accessorKey: "position",
-      header: "Position",
-      cell: ({ row }) => <div>{row.getValue("position")}</div>,
-    },
-    {
       accessorKey: "requestDate",
       header: "Request Date",
       cell: ({ row }) => <div>{row.getValue("requestDate")}</div>,
@@ -188,7 +182,6 @@ export function ParticipantsDataTable() {
       header: "Actions",
       cell: ({ row }) => {
         const participant = row.original
-        const isPending = participant.status === "Pending"
 
         return (
           <div className="flex space-x-2">
@@ -196,8 +189,7 @@ export function ParticipantsDataTable() {
               variant="outline"
               size="sm"
               className="h-8 w-8 p-0"
-              disabled={!isPending}
-              onClick={() => console.log("Approve", participant.id)}
+              onClick={() => handleApprove(participant.id, participant.memberId, participant.electionId)}
             >
               <Check className="h-4 w-4 text-green-500" />
               <span className="sr-only">Approve</span>
@@ -206,8 +198,7 @@ export function ParticipantsDataTable() {
               variant="outline"
               size="sm"
               className="h-8 w-8 p-0"
-              disabled={!isPending}
-              onClick={() => console.log("Deny", participant.id)}
+              onClick={() => handleDeny(participant.id, participant.memberId, participant.electionId)}
             >
               <X className="h-4 w-4 text-red-500" />
               <span className="sr-only">Deny</span>
@@ -234,6 +225,10 @@ export function ParticipantsDataTable() {
       rowSelection,
     },
   })
+
+  if (loading) {
+    return <div className="flex justify-center py-8">Loading pending candidates...</div>
+  }
 
   return (
     <div className="space-y-4">
@@ -272,7 +267,7 @@ export function ParticipantsDataTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No participants found.
+                  No pending candidates found.
                 </TableCell>
               </TableRow>
             )}
