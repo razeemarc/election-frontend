@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -5,20 +6,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
-type Election = {
+type Member = {
   id: string
-  title: string
-  date: string
-  status: "current" | "upcoming"
-  candidates: Candidate[]
+  name: string
 }
 
 type Candidate = {
   id: string
+  memberId: string
+  electionId: string
+  appliedAt: string
+  proposedElectionDate: string
+  status: string
+  member: Member
+}
+
+type Admin = {
+  id: string
   name: string
-  votes: number
+  email: string
+}
+
+type Election = {
+  id: string
+  title: string
+  description: string
+  startTime: string
+  endTime: string
+  createdBy: string
+  createdAt: string
+  admin: Admin
+  candidates: Candidate[]
 }
 
 type VoteModalProps = {
@@ -31,28 +51,66 @@ export function VoteModal({ isOpen, onClose, election }: VoteModalProps) {
   const [selectedCandidate, setSelectedCandidate] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleVote = () => {
+  const handleVote = async () => {
     if (!selectedCandidate) {
-      toast({
-        title: "Error",
-        description: "Please select a candidate to vote.",
-        variant: "destructive",
+      toast.error("Error", {
+        description: "Please select a candidate to vote."
       })
       return
     }
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Vote Submitted",
-        description: "Your vote has been recorded successfully.",
+    // Find the selected candidate to get memberId
+    const candidate = election.candidates.find(c => c.id === selectedCandidate)
+    
+    if (!candidate) {
+      toast.error("Error", {
+        description: "Selected candidate not found."
       })
       setIsSubmitting(false)
-      setSelectedCandidate("")
-      onClose()
-    }, 1000)
+      return
+    }
+
+    const payload = {
+      electionId: election.id,
+      candidateId: selectedCandidate,
+      memberId: candidate.memberId
+    }
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const response = await fetch(`${apiUrl}/api/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        toast.success("Vote Submitted", {
+          description: data.message || "Your vote has been recorded successfully."
+        })
+        setSelectedCandidate("")
+        onClose()
+      } else {
+        toast.error("Error", {
+          description: data.message || "Failed to submit vote."
+        })
+      }
+    } catch (error) {
+      console.error('Vote submission error:', error)
+      toast.error("Error", {
+        description: "An error occurred while submitting your vote. Please try again."
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -67,7 +125,7 @@ export function VoteModal({ isOpen, onClose, election }: VoteModalProps) {
               <div key={candidate.id} className="flex items-center space-x-2 py-2">
                 <RadioGroupItem value={candidate.id} id={candidate.id} />
                 <Label htmlFor={candidate.id} className="cursor-pointer">
-                  {candidate.name}
+                  {candidate.member.name}
                 </Label>
               </div>
             ))}

@@ -62,7 +62,7 @@ export default function ElectionsPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/members');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/members`);
         const data = await response.json();
         setMembers(data.members);
       } catch (error) {
@@ -112,7 +112,7 @@ export default function ElectionsPage() {
         memberIds: selectedUsers.map(user => user.id)
       };
 
-      const response = await fetch('http://localhost:5000/api/admin/election', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/election`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

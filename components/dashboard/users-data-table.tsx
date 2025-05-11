@@ -43,7 +43,7 @@ export function UsersDataTable() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/members')
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/members`)
         const result = await response.json()
         
         // Transform API data to match our table format
@@ -68,7 +68,7 @@ export function UsersDataTable() {
 
   const handleBlockToggle = async (memberId: string, isCurrentlyBlocked: boolean) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/candidate/block/${memberId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/candidate/block/${memberId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

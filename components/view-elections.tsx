@@ -1,80 +1,103 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VoteModal } from "./vote-model"
+import { toast } from "sonner"
+import { ElectionSkeleton } from "@/components/ui/election-skeleton"
 
-
-// Mock data for elections
-const mockElections = [
-  {
-    id: "1",
-    title: "Student Council Election",
-    date: "2025-06-15",
-    status: "current" as const,
-    candidates: [
-      { id: "c1", name: "Alex Johnson", votes: 120 },
-      { id: "c2", name: "Sarah Williams", votes: 95 },
-      { id: "c3", name: "Michael Brown", votes: 78 },
-    ],
-  },
-  {
-    id: "2",
-    title: "Class Representative Election",
-    date: "2025-06-20",
-    status: "current" as const,
-    candidates: [
-      { id: "c4", name: "Emily Davis", votes: 45 },
-      { id: "c5", name: "David Wilson", votes: 52 },
-    ],
-  },
-  {
-    id: "3",
-    title: "School Board Election",
-    date: "2025-07-10",
-    status: "upcoming" as const,
-    candidates: [
-      { id: "c6", name: "Jennifer Taylor", votes: 0 },
-      { id: "c7", name: "Robert Miller", votes: 0 },
-      { id: "c8", name: "Patricia Moore", votes: 0 },
-    ],
-  },
-  {
-    id: "4",
-    title: "Sports Committee Election",
-    date: "2025-07-25",
-    status: "upcoming" as const,
-    candidates: [
-      { id: "c9", name: "Thomas Anderson", votes: 0 },
-      { id: "c10", name: "Jessica Martin", votes: 0 },
-    ],
-  },
-]
-
-type Election = {
+// Define the types based on the API response structure
+type Member = {
   id: string
-  title: string
-  date: string
-  status: "current" | "upcoming"
-  candidates: Candidate[]
+  name: string
 }
 
 type Candidate = {
   id: string
+  memberId: string
+  electionId: string
+  appliedAt: string
+  proposedElectionDate: string
+  status: string
+  member: Member
+}
+
+type Admin = {
+  id: string
   name: string
-  votes: number
+  email: string
+}
+
+type Election = {
+  id: string
+  title: string
+  description: string
+  startTime: string
+  endTime: string
+  createdBy: string
+  createdAt: string
+  admin: Admin
+  candidates: Candidate[]
 }
 
 export function ViewElections() {
-  const [elections] = useState<Election[]>(mockElections)
+  const [currentElections, setCurrentElections] = useState<Election[]>([])
+  const [upcomingElections, setUpcomingElections] = useState<Election[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedElection, setSelectedElection] = useState<Election | null>(null)
   const [isVoteModalOpen, setIsVoteModalOpen] = useState(false)
 
-  const currentElections = elections.filter((election) => election.status === "current")
-  const upcomingElections = elections.filter((election) => election.status === "upcoming")
+  useEffect(() => {
+    const fetchElections = async () => {
+      setIsLoading(true)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      
+      try {
+        // Fetch current elections
+        const currentResponse = await fetch(`${apiUrl}/api/user/elections/current`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          credentials: 'include'
+        })
+        
+        // Fetch upcoming elections
+        const upcomingResponse = await fetch(`${apiUrl}/api/user/elections/upcoming`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          credentials: 'include'
+        })
+        
+        if (currentResponse.ok && upcomingResponse.ok) {
+          const currentData = await currentResponse.json()
+          const upcomingData = await upcomingResponse.json()
+          
+          setCurrentElections(currentData.data)
+          setUpcomingElections(upcomingData.data)
+        } else {
+          const errorData = await currentResponse.json()
+          toast.error("Error", {
+            description: errorData.message || "Failed to fetch elections"
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch elections:', error)
+        toast.error("Error", {
+          description: "An error occurred while fetching elections. Please try again later."
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchElections()
+  }, [])
 
   const handleVoteClick = (election: Election) => {
     setSelectedElection(election)
@@ -90,7 +113,9 @@ export function ViewElections() {
         </TabsList>
 
         <TabsContent value="current">
-          {currentElections.length > 0 ? (
+          {isLoading ? (
+            <ElectionSkeleton />
+          ) : currentElections.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {currentElections.map((election) => (
                 <ElectionCard
@@ -108,7 +133,9 @@ export function ViewElections() {
         </TabsContent>
 
         <TabsContent value="upcoming">
-          {upcomingElections.length > 0 ? (
+          {isLoading ? (
+            <ElectionSkeleton />
+          ) : upcomingElections.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {upcomingElections.map((election) => (
                 <ElectionCard
@@ -144,7 +171,7 @@ function ElectionCard({
   buttonText: string
   buttonDisabled: boolean
 }) {
-  const formattedDate = new Date(election.date).toLocaleDateString("en-US", {
+  const formattedDate = new Date(election.startTime).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -155,8 +182,8 @@ function ElectionCard({
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle>{election.title}</CardTitle>
-          <Badge variant={election.status === "current" ? "default" : "secondary"}>
-            {election.status === "current" ? "Active" : "Upcoming"}
+          <Badge variant={buttonDisabled ? "secondary" : "default"}>
+            {buttonDisabled ? "Upcoming" : "Active"}
           </Badge>
         </div>
         <CardDescription>Date: {formattedDate}</CardDescription>
@@ -165,7 +192,7 @@ function ElectionCard({
         <p className="text-sm mb-2">Candidates: {election.candidates.length}</p>
         <ul className="list-disc pl-5 text-sm text-muted-foreground">
           {election.candidates.map((candidate) => (
-            <li key={candidate.id}>{candidate.name}</li>
+            <li key={candidate.id}>{candidate.member.name}</li>
           ))}
         </ul>
       </CardContent>

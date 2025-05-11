@@ -2,54 +2,114 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+// Define Election type
+interface Election {
+  id: string
+  title: string
+  description: string
+  startTime: string
+  endTime: string
+}
 
 export function ParticipateElection() {
   const [name, setName] = useState("")
-  const [electionTitle, setElectionTitle] = useState("")
-  const [description, setDescription] = useState("")
+  const [selectedElectionId, setSelectedElectionId] = useState<string>("")
+  const [elections, setElections] = useState<Election[]>([])
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch elections on component mount
+  useEffect(() => {
+    const fetchElections = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch elections")
+        }
+        const data = await response.json()
+        setElections(data)
+      } catch (error) {
+        console.error("Error fetching elections:", error)
+        toast.error("Error", {
+          description: "Failed to load elections. Please try again later."
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchElections()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validation
-    if (!name || !electionTitle || !description || !date) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
+    if (!name || !selectedElectionId || !date) {
+      toast.error("Error", {
+        description: "Please fill in all required fields."
       })
       return
     }
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Application Submitted",
-        description: "Your election participation request has been submitted successfully.",
+    try {
+      // Format date to YYYY-MM-DD
+      const formattedDate = date.toISOString().split('T')[0]
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userName: name,
+          electionId: selectedElectionId,
+          proposedElectionDate: formattedDate,
+        }),
       })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        toast.success("Application Submitted", {
+          description: "Your election participation request has been submitted successfully."
+        })
+        
+        // Reset form
+        setName("")
+        setSelectedElectionId("")
+        setDate(undefined)
+      } else {
+        // Display the specific error message from the API
+        toast.error("Error", {
+          description: data.message || "Failed to submit application."
+        })
+      }
+      
+    } catch (error) {
+      console.error("Error submitting application:", error)
+      toast.error("Error", {
+        description: "An error occurred. Please try again later."
+      })
+    } finally {
       setIsSubmitting(false)
-      // Reset form
-      setName("")
-      setElectionTitle("")
-      setDescription("")
-      setDate(undefined)
-    }, 1000)
+    }
   }
 
   return (
@@ -72,26 +132,23 @@ export function ParticipateElection() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="election-title">Election Title</Label>
-            <Input
-              id="election-title"
-              placeholder="Enter the election title"
-              value={electionTitle}
-              onChange={(e) => setElectionTitle(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Election Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Provide details about the election"
-              className="min-h-[100px]"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
+            <Label>Election Title</Label>
+            <Select
+              disabled={isLoading}
+              value={selectedElectionId}
+              onValueChange={setSelectedElectionId}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select an election" />
+              </SelectTrigger>
+              <SelectContent>
+                {elections.map((election) => (
+                  <SelectItem key={election.id} value={election.id}>
+                    {election.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -119,7 +176,7 @@ export function ParticipateElection() {
           </div>
 
           <CardFooter className="px-0 pt-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isLoading}>
               {isSubmitting ? "Submitting..." : "Submit Application"}
             </Button>
           </CardFooter>
