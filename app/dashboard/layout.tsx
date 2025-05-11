@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/userStore";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { Navbar } from "@/components/navbar";
 
 export default function DashboardLayout({
   children,
@@ -34,8 +35,9 @@ export default function DashboardLayout({
   }
 
   return (
+    
     <SidebarProvider>
-  
+
       <div className="flex  w-full min-h-screen">
         <DashboardSidebar />
         <div className="flex-1   p-8">{children}</div>

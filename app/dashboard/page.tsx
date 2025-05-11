@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Overview } from "@/components/dashboard/overview"
 import { RecentElections } from "@/components/dashboard/recent-elections"
+import { Navbar } from "@/components/navbar"
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -31,7 +32,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-     
+      
       <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
