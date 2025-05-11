@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ElectionDashboard from "../components/election-dashboard";
 import { useUserStore } from "@/store/userStore";
+import { UserNav } from "@/components/dashboard/user-nav";
 
 export default function Home() {
   const router = useRouter();
@@ -21,6 +22,11 @@ export default function Home() {
 
   return (
     <main className="container mx-auto py-10 px-4">
+      {isAuthenticated && (
+        <div className="flex justify-end mb-4">
+          <UserNav />
+        </div>
+      )}
       <h1 className="text-3xl font-bold text-center mb-10">Election System</h1>
       {isAuthenticated && user?.role === "USER" ? (
         <>

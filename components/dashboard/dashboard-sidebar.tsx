@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Vote, UserCircle, Settings, LogOut } from "lucide-react"
+import { BarChart3, Users, Vote, UserCircle, Settings, LogOut, Trophy } from "lucide-react"
 import { useUserStore } from "@/store/userStore"
 
 import {
@@ -51,6 +51,11 @@ export function DashboardSidebar() {
       title: "User Management",
       href: "/dashboard/users",
       icon: Users,
+    },
+    {
+      title: "Results",
+      href: "/dashboard/result",
+      icon: Trophy,
     },
     // {
     //   title: "Settings",
