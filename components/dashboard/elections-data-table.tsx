@@ -246,28 +246,29 @@ export function ElectionsDataTable() {
     
     setIsSubmitting(true)
     try {
-      const startDateTime = `${editFormData.startDate}T${editFormData.startTime}:00`
-      const endDateTime = `${editFormData.endDate}T${editFormData.endTime}:00`
+      // Combine date and time inputs into ISO strings
+      const startDateTime = new Date(`${editFormData.startDate}T${editFormData.startTime}:00`).toISOString()
+      const endDateTime = new Date(`${editFormData.endDate}T${editFormData.endTime}:00`).toISOString()
       
       const payload = {
-        id: currentElection.id,
         title: editFormData.title,
-       
         startTime: startDateTime,
-        endTime: endDateTime,
-        memberIds: selectedUsers.map(user => user.id)
+        endTime: endDateTime
       }
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/election/${currentElection.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          // Add authorization header if needed
+          // 'Authorization': `Bearer ${yourAuthToken}`
         },
         body: JSON.stringify(payload)
       })
       
       if (!response.ok) {
-        throw new Error('Failed to update election')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update election')
       }
       
       await fetchElections() // Refresh the elections list
@@ -282,14 +283,13 @@ export function ElectionsDataTable() {
       console.error("Error updating election:", error)
       toast({
         title: "Error",
-        description: "Failed to update election. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update election",
         variant: "destructive"
       })
     } finally {
       setIsSubmitting(false)
     }
   }
-
   // Handle delete election
   const handleDelete = async () => {
     if (!currentElection) return
@@ -298,10 +298,15 @@ export function ElectionsDataTable() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/election/${currentElection.id}`, {
         method: 'DELETE',
+        headers: {
+          // Add authorization header if needed
+          // 'Authorization': `Bearer ${yourAuthToken}`
+        }
       })
       
       if (!response.ok) {
-        throw new Error('Failed to delete election')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete election')
       }
       
       // Remove the election from the local state
@@ -317,14 +322,13 @@ export function ElectionsDataTable() {
       console.error("Error deleting election:", error)
       toast({
         title: "Error",
-        description: "Failed to delete election. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete election",
         variant: "destructive"
       })
     } finally {
       setIsSubmitting(false)
     }
   }
-
   const columns: ColumnDef<Election>[] = [
     {
       id: "select",
@@ -553,7 +557,7 @@ export function ElectionsDataTable() {
               </div>
             
               
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="participants">Select Participants</Label>
                 <Popover open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>
                   <PopoverTrigger asChild>
@@ -612,7 +616,7 @@ export function ElectionsDataTable() {
                     ))}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               <div className="flex flex-col gap-4">
                 <div className="space-y-2">
