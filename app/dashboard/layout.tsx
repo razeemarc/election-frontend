@@ -35,6 +35,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+  
       <div className="flex  w-full min-h-screen">
         <DashboardSidebar />
         <div className="flex-1   p-8">{children}</div>
