@@ -132,8 +132,9 @@ export function UsersDataTable() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={row.getValue("name")} />
-            <AvatarFallback>{(row.getValue("name") as string).charAt(0)}</AvatarFallback>
+            <AvatarFallback>
+              {(row.getValue("name") as string).charAt(0).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div className="font-medium">{row.getValue("name")}</div>
         </div>
