@@ -59,7 +59,7 @@ export function DashboardSidebar() {
       <SidebarHeader className="flex h-16 items-center border-b px-6 py-4 mb-8">
         <Link href="/dashboard" className="flex items-center gap-3 font-semibold">
           <Vote className="h-6 w-6 text-blue-600" />
-          <span className="text-lg">Votin System</span>
+          <span className="text-lg">Election System</span>
         </Link>
         <SidebarTrigger className="ml-auto md:hidden" />
       </SidebarHeader>
