@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Award, Calendar, User, Clock, ChevronRight, AlertTriangle, CheckCircle2, Users } from "lucide-react"
+import { useElectionResults } from "@/hooks/useElectionResults"
 
 // Define types based on the API response
 interface Member {
@@ -36,37 +37,7 @@ interface ApiResponse {
 }
 
 export default function ElectionResults() {
-  const [elections, setElections] = useState<Election[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchElectionResults = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/results/`)
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch election results: ${response.status}`)
-        }
-
-        const data: ApiResponse = await response.json()
-
-        if (data.success) {
-          setElections(data.data)
-        } else {
-          throw new Error("API returned unsuccessful response")
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
-        console.error("Error fetching election results:", err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchElectionResults()
-  }, [])
+  const { data: elections = [], isLoading, isError, error } = useElectionResults()
 
   // Calculate the maximum vote count for an election to set the progress bar scale
   const getMaxVotes = (candidates: Candidate[]) => {
@@ -87,7 +58,7 @@ export default function ElectionResults() {
     return <LoadingSkeleton />
   }
 
-  if (error) {
+  if (isError) {
     return (
       <Card className="w-full max-w-4xl mx-auto my-8 border-red-200 dark:border-red-800 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-900/10">
@@ -97,7 +68,7 @@ export default function ElectionResults() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <p className="text-red-500 dark:text-red-400">{error}</p>
+          <p className="text-red-500 dark:text-red-400">{error?.message}</p>
         </CardContent>
       </Card>
     )
