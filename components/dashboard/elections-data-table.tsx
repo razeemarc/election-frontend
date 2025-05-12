@@ -1,5 +1,6 @@
 "use client"
 
+import useSWR from 'swr'
 import { useState, useEffect } from "react"
 import {
   type ColumnDef,
@@ -88,7 +89,14 @@ interface Member {
   }[];
 }
 
+const fetcher = (url: string) => fetch(url).then(res => res.json())
+
 export function ElectionsDataTable() {
+  const { data: elections, error, mutate } = useSWR(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`,
+    fetcher
+  )
+
   const [data, setData] = useState<Election[]>([])
   const [loading, setLoading] = useState(true)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -174,9 +182,48 @@ export function ElectionsDataTable() {
   }
 
   useEffect(() => {
-    fetchElections()
     fetchMembers()
   }, [])
+
+  useEffect(() => {
+    if (elections) {
+      const processedElections = elections.map((election: any) => {
+        const now = new Date()
+        const startTime = new Date(election.startTime)
+        const endTime = new Date(election.endTime)
+
+        let status: "Draft" | "Scheduled" | "Active" | "Completed" | "Cancelled" = "Scheduled"
+
+        if (now < startTime) {
+          status = "Scheduled"
+        } else if (now >= startTime && now <= endTime) {
+          status = "Active"
+        } else if (now > endTime) {
+          status = "Completed"
+        }
+
+        return {
+          id: election.id,
+          title: election.title,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          status,
+          participants: election.candidates?.length || 0,
+          votes: election.votes?.length || 0,
+          admin: election.admin,
+          candidates: election.candidates || []
+        }
+      })
+
+      // Sort by creation date (newest first)
+      processedElections.sort((a: Election, b: Election) => {
+        return new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      })
+
+      setData(processedElections)
+      setLoading(false)
+    }
+  }, [elections])
 
   // Handle opening edit dialog
   const handleEditElection = (election: Election) => {

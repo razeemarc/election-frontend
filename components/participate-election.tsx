@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useUserStore } from "@/store/userStore"
 
 // Define Election type
 interface Election {
@@ -31,6 +32,7 @@ export function ParticipateElection() {
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const { user } = useUserStore(); // <-- Add this line
 
   // Fetch elections on component mount
   useEffect(() => {
@@ -125,8 +127,8 @@ export function ParticipateElection() {
             <Input
               id="name"
               placeholder="Enter your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={user?.name || ""}
+              readOnly
               required
             />
           </div>

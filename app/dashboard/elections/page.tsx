@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react";
+import { mutate } from 'swr'; // <-- Add this import
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Calendar, Clock, Check, Search, X } from "lucide-react";
 import {
@@ -126,9 +127,9 @@ export default function ElectionsPage() {
 
       const newElection = await response.json();
       console.log("Election created:", newElection);
-      
-      // Here you would typically update your elections list
-      // For example, by refetching the elections data
+
+      // Trigger a revalidation of the elections data
+      mutate(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`);
 
       setOpen(false);
       // Reset form
