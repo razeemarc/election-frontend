@@ -399,12 +399,12 @@ export function UsersDataTable() {
                 className="pl-8 pr-4"
               />
             </div>
-            <Button variant="outline" size="icon" className="hidden md:flex">
+            {/* <Button variant="outline" size="icon" className="hidden md:flex">
               <Filter className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon" className="hidden md:flex">
               <Download className="h-4 w-4" />
-            </Button>
+            </Button> */}
           </div>
         </div>
 

@@ -183,17 +183,7 @@ export default function ElectionsPage() {
                 />
               </div>
               
-              {/* <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Enter election description"
-                />
-              </div> */}
-              
+           
               <div className="space-y-2">
                 <Label htmlFor="participants">Select Participants</Label>
                 <Popover open={userDropdownOpen} onOpenChange={setUserDropdownOpen}>

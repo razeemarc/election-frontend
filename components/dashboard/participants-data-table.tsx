@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, Check, X } from "lucide-react"
+import { ArrowUpDown, Check, X, Search, Loader2, UserPlus, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 export type Participant = {
   id: string
@@ -110,6 +111,18 @@ export function ParticipantsDataTable() {
     }
   }
 
+  const getRandomColor = (name: string) => {
+    const colors = [
+      "bg-blue-500", "bg-green-500", "bg-yellow-500", 
+      "bg-purple-500", "bg-pink-500", "bg-indigo-500", 
+      "bg-teal-500", "bg-orange-500", "bg-cyan-500"
+    ];
+    
+    // Generate a consistent index based on the name string
+    const hash = name.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+    return colors[hash % colors.length];
+  };
+
   const columns: ColumnDef<Participant>[] = [
     {
       id: "select",
@@ -134,37 +147,60 @@ export function ParticipantsDataTable() {
       accessorKey: "name",
       header: ({ column }) => {
         return (
-          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-semibold">
             Name
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>
-            {(row.getValue("name") as string).charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="font-medium">{row.getValue("name")}</div>
-      </div>
-      ),
+      cell: ({ row }) => {
+        const name = row.getValue("name") as string;
+        const colorClass = getRandomColor(name);
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9 border border-gray-200 shadow-sm">
+              <AvatarFallback className={`${colorClass} text-white`}>
+                {name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="font-medium">{name}</div>
+          </div>
+        )
+      },
     },
     {
       accessorKey: "email",
       header: "Email",
-      cell: ({ row }) => <div>{row.getValue("email")}</div>,
+      cell: ({ row }) => <div className="text-gray-600">{row.getValue("email")}</div>,
     },
     {
       accessorKey: "election",
-      header: "Election",
-      cell: ({ row }) => <div>{row.getValue("election")}</div>,
+      header: ({ column }) => {
+        return (
+          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-semibold">
+            Election
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="font-medium">{row.getValue("election")}</div>,
     },
     {
       accessorKey: "requestDate",
-      header: "Request Date",
-      cell: ({ row }) => <div>{row.getValue("requestDate")}</div>,
+      header: ({ column }) => {
+        return (
+          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-semibold">
+            Request Date
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 text-gray-600">
+          <Calendar className="h-4 w-4" />
+          {row.getValue("requestDate")}
+        </div>
+      ),
     },
     {
       accessorKey: "status",
@@ -172,7 +208,10 @@ export function ParticipantsDataTable() {
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         return (
-          <Badge variant={status === "Approved" ? "default" : status === "Pending" ? "outline" : "destructive"}>
+          <Badge 
+            variant={status === "Approved" ? "default" : status === "Pending" ? "outline" : "destructive"}
+            className={`${status === "Pending" ? "bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100" : ""} px-3 py-1`}
+          >
             {status}
           </Badge>
         )
@@ -189,8 +228,9 @@ export function ParticipantsDataTable() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 border-green-200 hover:bg-green-50 hover:text-green-600"
               onClick={() => handleApprove(participant.id, participant.memberId, participant.electionId)}
+              title="Approve"
             >
               <Check className="h-4 w-4 text-green-500" />
               <span className="sr-only">Approve</span>
@@ -198,8 +238,9 @@ export function ParticipantsDataTable() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 border-red-200 hover:bg-red-50 hover:text-red-600"
               onClick={() => handleDeny(participant.id, participant.memberId, participant.electionId)}
+              title="Deny"
             >
               <X className="h-4 w-4 text-red-500" />
               <span className="sr-only">Deny</span>
@@ -228,72 +269,124 @@ export function ParticipantsDataTable() {
   })
 
   if (loading) {
-    return <div className="flex justify-center py-8">Loading pending candidates...</div>
+    return (
+      <div className="flex justify-center items-center py-16">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-lg text-gray-600">Loading pending candidates...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter participants..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No pending candidates found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
+    <Card className="shadow-md border-gray-200">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b pb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold text-gray-800">Pending Candidates</CardTitle>
+            <CardDescription className="text-gray-600 mt-1">
+              Review and manage participant requests
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="bg-white px-3 py-1">
+              <UserPlus className="h-4 w-4 mr-1" />
+              <span>{data.length} Pending</span>
+            </Badge>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
+      </CardHeader>
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search participants..."
+                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+                className="pl-10 border-gray-300 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="border-b border-gray-200">
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} className="text-gray-700 font-semibold">
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow 
+                      key={row.id} 
+                      data-state={row.getIsSelected() && "selected"}
+                      className="hover:bg-blue-50 transition-colors border-b last:border-0"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-3">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-32 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-500">
+                        <UserPlus className="h-10 w-10 mb-2 text-gray-400" />
+                        <p className="text-lg font-medium">No pending candidates found</p>
+                        <p className="text-gray-400 text-sm mt-1">All requests have been processed</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex-1 text-sm text-gray-600">
+              {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
+              selected.
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="flex items-center"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              </div>
+              <Button 
+                variant="outline"
+                size="sm" 
+                onClick={() => table.nextPage()} 
+                disabled={!table.getCanNextPage()}
+                className="flex items-center"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
