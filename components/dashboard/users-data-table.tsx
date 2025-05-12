@@ -35,6 +35,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useMembersQuery } from "@/hooks/useMembersQuery"
+// REMOVE: import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 export type Member = {
   id: string
@@ -49,47 +51,18 @@ export type Member = {
 }
 
 export function UsersDataTable() {
-  const [data, setData] = useState<Member[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data = [], isLoading, isError, error, refetch } = useMembersQuery()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState({})
   const [activeTab, setActiveTab] = useState("all")
   const [pageSize, setPageSize] = useState(10)
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        // Fetch data from the API
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/members`)
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching members: ${response.status}`)
-        }
-        
-        const result = await response.json()
-        
-        // Transform API data to match our table format
-        const members = result.members.map((member: Member) => ({
-          ...member,
-          status: member.isBlocked ? "Blocked" : "Active",
-          role: member.role === "ADMIN" ? "Admin" : 
-                member.role === "MODERATOR" ? "Moderator" : "User",
-          lastLogin: member.lastLogin || "Never logged in"
-        }))
-        
-        setData(members)
-      } catch (error) {
-        console.error("Failed to fetch members:", error)
-        setError("Failed to load users. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchMembers()
-  }, [])
+  // REMOVE this entire useEffect and its fetchMembers function
+  // useEffect(() => {
+  //   const fetchMembers = async () => { ... }
+  //   fetchMembers()
+  // }, [])
 
   const handleBlockToggle = async (memberId: string, isCurrentlyBlocked: boolean) => {
     try {
@@ -107,18 +80,8 @@ export function UsersDataTable() {
         throw new Error('Failed to update member status')
       }
 
-      // Update local state to reflect the change
-      setData(prevData => 
-        prevData.map(member => 
-          member.id === memberId 
-            ? { 
-                ...member, 
-                isBlocked: !isCurrentlyBlocked, 
-                status: isCurrentlyBlocked ? "Active" : "Blocked" 
-              } 
-            : member
-        )
-      )
+      // Instead of setData, just refetch the query data
+      refetch()
     } catch (error) {
       console.error("Error updating member status:", error)
     }
@@ -290,12 +253,12 @@ export function UsersDataTable() {
   }, [pageSize, table])
 
   // Calculate stats
-  const totalUsers = data.length
-  const activeUsers = data.filter(user => !user.isBlocked).length
-  const blockedUsers = data.filter(user => user.isBlocked).length
+  const totalUsers = Array.isArray(data) ? data.length : 0
+  const activeUsers = Array.isArray(data) ? data.filter(user => user && user.isBlocked === false).length : 0
+  const blockedUsers = Array.isArray(data) ? data.filter(user => user && user.isBlocked === true).length : 0
 
   // Render loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="border shadow-sm">
         <CardHeader className="pb-2">
@@ -315,7 +278,7 @@ export function UsersDataTable() {
   }
 
   // Render error state
-  if (error) {
+  if (isError) {
     return (
       <Card className="border shadow-sm">
         <CardHeader className="pb-2">
@@ -327,9 +290,9 @@ export function UsersDataTable() {
             <div className="text-center">
               <UserX className="mx-auto h-12 w-12 mb-4" />
               <h3 className="text-lg font-medium">Error Loading Users</h3>
-              <p className="text-muted-foreground">{error}</p>
+              <p className="text-muted-foreground">{(error as Error).message}</p>
               <Button 
-                onClick={() => window.location.reload()} 
+                onClick={() => refetch()} 
                 className="mt-4"
                 variant="outline"
               >
