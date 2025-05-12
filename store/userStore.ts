@@ -21,10 +21,10 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
-      token: null,
-      isAuthenticated: false,
+      token: Cookies.get('auth_token') || null, // Restore token from cookie if present
+      isAuthenticated: !!Cookies.get('auth_token'), // Set true if token exists
       login: (userData: User, token: string) => {
         // Store token in cookie (7 days expiry by default)
         Cookies.set('auth_token', token, { expires: 7, sameSite: 'Lax' });
