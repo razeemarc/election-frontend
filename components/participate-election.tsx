@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUserStore } from "@/store/userStore"
 import { motion } from "framer-motion"
+import { useElectionsList } from "@/hooks/useElectionsList"
 
 // Define Election type
 interface Election {
@@ -29,35 +30,33 @@ interface Election {
 export function ParticipateElection() {
   const [name, setName] = useState("")
   const [selectedElectionId, setSelectedElectionId] = useState<string>("")
-  const [elections, setElections] = useState<Election[]>([])
+  const { data: elections = [], isLoading: isElectionsLoading, isError } = useElectionsList()
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const { user } = useUserStore()
 
-  // Fetch elections on component mount
-  useEffect(() => {
-    const fetchElections = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch elections")
-        }
-        const data = await response.json()
-        setElections(data)
-      } catch (error) {
-        console.error("Error fetching elections:", error)
-        toast.error("Error", {
-          description: "Failed to load elections. Please try again later."
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchElections()
-  }, [])
+  // REMOVE this entire useEffect block and related state:
+  // useEffect(() => {
+  //   const fetchElections = async () => {
+  //     try {
+  //       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/elections`)
+  //       if (!response.ok) {
+  //         throw new Error("Failed to fetch elections")
+  //       }
+  //       const data = await response.json()
+  //       setElections(data)
+  //     } catch (error) {
+  //       console.error("Error fetching elections:", error)
+  //       toast.error("Error", {
+  //         description: "Failed to load elections. Please try again later."
+  //       })
+  //     } finally {
+  //       setIsLoading(false)
+  //     }
+  //   }
+  //   fetchElections()
+  // }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,7 +208,7 @@ export function ParticipateElection() {
                 <Label className="font-medium">Election Title</Label>
               </div>
               <Select
-                disabled={isLoading}
+                disabled={isElectionsLoading}
                 value={selectedElectionId}
                 onValueChange={setSelectedElectionId}
               >
@@ -224,7 +223,7 @@ export function ParticipateElection() {
                   ))}
                 </SelectContent>
               </Select>
-              {isLoading && (
+              {isElectionsLoading && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                   <AlertCircle className="h-3 w-3" /> Loading available elections...
                 </p>
@@ -267,7 +266,7 @@ export function ParticipateElection() {
               <Button 
                 type="submit" 
                 className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-md hover:shadow-lg" 
-                disabled={isSubmitting || isLoading}
+                disabled={isSubmitting || isElectionsLoading}
               >
                 {isSubmitting ? (
                   <>
