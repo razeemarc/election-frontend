@@ -3,6 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { useMonthlyElections } from "@/hooks/useMonthlyElections"
 
 interface MonthlyData {
   name: string
@@ -24,50 +25,7 @@ interface ApiResponse {
 }
 
 export function Overview() {
-  const [chartData, setChartData] = useState<MonthlyData[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchMonthlyData = async () => {
-      try {
-        setIsLoading(true)
-        // Get token from localStorage or wherever you store your auth token
-        const token = localStorage.getItem("token")
-        
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard/monthly-elections`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch monthly election data")
-        }
-
-        const result = await response.json() as ApiResponse
-        
-        if (result.success && result.data.months) {
-          // Transform the data to match the component's expected format
-          const formattedData: MonthlyData[] = result.data.months.map(item => ({
-            name: item.name,
-            total: item.count
-          }))
-          
-          setChartData(formattedData)
-        } else {
-          throw new Error("Invalid data structure received from API")
-        }
-      } catch (err) {
-        console.error("Error fetching monthly election data:", err)
-        setError(err instanceof Error ? err.message : "An unknown error occurred")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchMonthlyData()
-  }, [])
+  const { data, isLoading, isError, error } = useMonthlyElections()
 
   // Show loading state
   if (isLoading) {
@@ -80,17 +38,17 @@ export function Overview() {
   }
 
   // Show error state
-  if (error) {
+  if (isError) {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-lg flex flex-col items-center justify-center h-[350px]">
         <p className="font-medium mb-2">Unable to load chart data</p>
-        <p className="text-sm opacity-80">{error}</p>
+        <p className="text-sm opacity-80">{error?.message}</p>
       </div>
     )
   }
 
   // Use the static data as fallback if API call fails or returns empty data
-  const fallbackData: MonthlyData[] = [
+  const fallbackData: { name: string; total: number }[] = [
     { name: "Jan", total: 2 },
     { name: "Feb", total: 3 },
     { name: "Mar", total: 1 },
@@ -105,7 +63,15 @@ export function Overview() {
     { name: "Dec", total: 1 },
   ]
 
-  // Use API data if available, otherwise use fallback data
+  // Transform API data to chart format
+  const chartData =
+    data && data.success && data.data.months
+      ? data.data.months.map(item => ({
+          name: item.name,
+          total: item.count,
+        }))
+      : []
+
   const displayData = chartData.length > 0 ? chartData : fallbackData
 
   // Custom tooltip for the chart
