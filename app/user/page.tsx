@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUserStore } from "@/store/userStore";
 import { Vote, ArrowRight, LockKeyhole, User } from "lucide-react";
 import ElectionDashboard from "@/components/election-dashboard";
+import { Navbar } from "@/components/navbar";
 
 export default function Home() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <Navbar />
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-center mb-10">
           <div className="flex items-center gap-3">
