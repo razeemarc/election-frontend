@@ -2,27 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ElectionDashboard from "../components/election-dashboard";
+
 import { useUserStore } from "@/store/userStore";
 import { Vote, ArrowRight, LockKeyhole, User } from "lucide-react";
+import ElectionDashboard from "@/components/election-dashboard";
 
 export default function Home() {
   const router = useRouter();
   const { user, isAuthenticated } = useUserStore();
   
-  useEffect(() => {
-    console.log("User role:", user?.role);
-    console.log("Is authenticated:", isAuthenticated);
-    
-    if (isAuthenticated && user?.role === "ADMIN") {
-      console.log("Redirecting admin to dashboard");
-      router.push("/dashboard");
-    }
-    else if (isAuthenticated && user?.role === "USER") {
-      console.log("Redirecting admin to dashboard");
-      router.push("/user");
-    }
-  }, [user, isAuthenticated, router]);
+
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
