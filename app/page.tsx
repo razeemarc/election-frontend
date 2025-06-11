@@ -25,7 +25,7 @@ export default function Home() {
   }, [user, isAuthenticated, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white ">
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-center mb-10">
           <div className="flex items-center gap-3">
