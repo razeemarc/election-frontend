@@ -36,7 +36,7 @@ export default function ElectionDashboard() {
 
   return (
     <motion.div 
-      className="max-w-5xl mx-auto py-8 px-4"
+      className="max-w-5xl mx-auto py-8 px-4 dark:bg-black"
       initial="hidden"
       animate={mounted ? "visible" : "hidden"}
       variants={containerVariants}
