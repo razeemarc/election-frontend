@@ -18,10 +18,14 @@ export default function Home() {
       console.log("Redirecting admin to dashboard");
       router.push("/dashboard");
     }
+    else if (isAuthenticated && user?.role === "USER") {
+      console.log("Redirecting admin to dashboard");
+      router.push("/user");
+    }
   }, [user, isAuthenticated, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white ">
       <div className="container mx-auto py-10 px-4">
         <div className="flex justify-center mb-10">
           <div className="flex items-center gap-3">
