@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Overview } from "@/components/dashboard/overview"
 import { RecentElections } from "@/components/dashboard/recent-elections"
-import { Navbar } from "@/components/navbar"
+
 import { ChevronUp, Activity, Users, CalendarCheck, Clock } from "lucide-react"
 
 export default function DashboardPage() {
@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Navbar />
+    
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Dashboard</h1>
         <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-1 rounded-full text-sm font-medium text-blue-600 dark:text-blue-300 flex items-center">

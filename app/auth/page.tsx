@@ -204,9 +204,9 @@ const AuthUI = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password" className="text-gray-700">Password</Label>
-                      <a href="#" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+                      {/* <a href="#" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
                         Forgot password?
-                      </a>
+                      </a> */}
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
@@ -392,11 +392,7 @@ const AuthUI = () => {
           </Tabs>
         </Card>
         
-        <p className="text-center text-xs text-gray-500 mt-8">
-          By continuing, you agree to our {" "}
-          <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and {" "}
-          <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.
-        </p>
+        
       </motion.div>
     </div>
   );
