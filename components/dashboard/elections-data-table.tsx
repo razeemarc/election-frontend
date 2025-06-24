@@ -471,7 +471,7 @@
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(election.id)}>
-                  Copy election ID
+                
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleEditElection(election)}>
